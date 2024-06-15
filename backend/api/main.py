@@ -34,34 +34,54 @@ app = FastAPI(lifespan=lifespan)
 async def root(): # Need to establish connection to database on connection to site
     return {"connection_status": 200}
 
+# Need to fix spaza registration api call
 @app.post("/register_spaza/")
 def register_user(shop: SpazaInfo, db=Depends(get_db_session)):
     try:
         # Start a transaction
         with db.begin():
+            # Check if registration exists
+            query_email = text("SELECT id FROM SPAZASHOPS WHERE registration = :registration")
+            result_email = db.execute(query_email, {"registration": shop.spaza_reg_no}).fetchone()
+            if result_email:
+                raise HTTPException(status_code=400, detail="Registration Number already exists")
+            
             # Check if the username already exists
-            query_username = text("SELECT id FROM users WHERE username = :username")
-            result_username = db.execute(query_username, {"username": shop.spaza_name}).fetchone()
+            query_username = text("SELECT id FROM SPAZASHOPS WHERE name = :name")
+            result_username = db.execute(query_username, {"name": shop.spaza_name}).fetchone()
             if result_username:
-                raise HTTPException(status_code=400, detail="Username already exists")
+                raise HTTPException(status_code=400, detail="SPAZASHOP Name already exists")
             
             # Check if the email already exists
-            query_email = text("SELECT id FROM users WHERE email = :email")
+            query_email = text("SELECT id FROM SPAZASHOPS WHERE email = :email")
             result_email = db.execute(query_email, {"email": shop.spaza_email}).fetchone()
             if result_email:
-                raise HTTPException(status_code=400, detail="Email already exists")
+                raise HTTPException(status_code=400, detail="SPAZASHOP Email already exists")
             
             # Hash the password
             hashed_password = bcrypt.hashpw(shop.spaza_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             
             # Insert the user into the database
-            query_insert = text("INSERT INTO users (username, email, password) VALUES (:username, :email, :password)")
-            db.execute(query_insert, {"username": shop.spaza_name, "email": shop.spaza_email, "password": hashed_password})
+            query_insert = text("INSERT INTO SPAZASHOPS (name, email, registration_id, loyalty_no, password) VALUES (:name, :email, :registration, :loyalty, :password)")
+            db.execute(query_insert, {"name": shop.spaza_name, "email": shop.spaza_email, "registration":shop.spaza_reg_no , "loyalty": shop.spaza_loyalty_no, "password": hashed_password})
             
             db.commit()
         
-        return {"message": "User registered successfully"}
+        return {"message": "Shop registered successfully"}
     
     except Exception as e:
         db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    
+@app.post("/spaza_login/")
+def login_user(shop: SpazaInfo, db=Depends(get_db_session)):
+    try:
+        query = text("SELECT * FROM SPAZASHOPS WHERE registration = :registration")
+        result = db.execute(query, {"registration": shop.username}).fetchone()
+        
+        if result and bcrypt.checkpw(shop.password.encode('utf-8'), result[4].encode('utf-8')):  # Assuming password is the 5th column (index 4)
+            return {"message": "Login successful"}
+        else:
+            raise HTTPException(status_code=401, detail="Invalid registration or password for Spaza shop")
+    except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
