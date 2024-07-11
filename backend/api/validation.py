@@ -2,10 +2,9 @@ from pydantic import BaseModel
 
 class SpazaInfo(BaseModel):
     spaza_name: str
-    spaza_reg_no: int
+    spaza_reg_no: str
     spaza_email: str
     spaza_password: str
-    spaza_loyalty_no: str
 
 class LoanApplication(BaseModel):
     applicant_name: str

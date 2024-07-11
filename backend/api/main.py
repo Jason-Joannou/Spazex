@@ -3,9 +3,9 @@ from sqlalchemy import text
 from contextlib import asynccontextmanager
 import logging
 import bcrypt
-import json
 from database.sql_connection import SQLiteConnection
 from .validation import SpazaInfo
+from .utility import generate_loyalty_number
 
 db_conn = SQLiteConnection(database="./test_db.db")
 
@@ -35,15 +35,15 @@ async def root(): # Need to establish connection to database on connection to si
     return {"connection_status": 200}
 
 # Need to fix spaza registration api call
-@app.post("/register_spaza/")
+@app.post("/register_spaza")
 def register_user(shop: SpazaInfo, db=Depends(get_db_session)):
     try:
         # Start a transaction
         with db.begin():
             # Check if registration exists
-            query_email = text("SELECT id FROM SPAZASHOPS WHERE registration = :registration")
-            result_email = db.execute(query_email, {"registration": shop.spaza_reg_no}).fetchone()
-            if result_email:
+            query_reg = text("SELECT id FROM SPAZASHOPS WHERE registration_id = :registration")
+            result_reg = db.execute(query_reg, {"registration": shop.spaza_reg_no}).fetchone()
+            if result_reg:
                 raise HTTPException(status_code=400, detail="Registration Number already exists")
             
             # Check if the username already exists
@@ -58,12 +58,15 @@ def register_user(shop: SpazaInfo, db=Depends(get_db_session)):
             if result_email:
                 raise HTTPException(status_code=400, detail="SPAZASHOP Email already exists")
             
+            # Loyalty Number
+            loyal_no = generate_loyalty_number(shop_name=shop.spaza_name, registration_number=shop.spaza_reg_no)
+            
             # Hash the password
             hashed_password = bcrypt.hashpw(shop.spaza_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             
             # Insert the user into the database
             query_insert = text("INSERT INTO SPAZASHOPS (name, email, registration_id, loyalty_no, password) VALUES (:name, :email, :registration, :loyalty, :password)")
-            db.execute(query_insert, {"name": shop.spaza_name, "email": shop.spaza_email, "registration":shop.spaza_reg_no , "loyalty": shop.spaza_loyalty_no, "password": hashed_password})
+            db.execute(query_insert, {"name": shop.spaza_name, "email": shop.spaza_email, "registration":shop.spaza_reg_no , "loyalty": loyal_no, "password": hashed_password})
             
             db.commit()
         
