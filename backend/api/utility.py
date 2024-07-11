@@ -1,15 +1,14 @@
 import hashlib
-import base64
-
 
 def generate_loyalty_number(shop_name: str, registration_number: str) -> str:
-    combined_string = f"{shop_name}{registration_number}"
-    hash_object = hashlib.sha256(combined_string.encode())
-    hash_bytes = hash_object.digest()
+    combined_string = f"{shop_name}_{registration_number}"
+    hash_object = hashlib.md5(combined_string.encode())
+    hash_hex = hash_object.hexdigest()
     
-    truncated_hash_bytes = hash_bytes[:10]
+    # Take the first 6 characters for a simpler identifier
+    simple_identifier = hash_hex[:6]
     
-    loyalty_number = base64.b32encode(truncated_hash_bytes).decode('utf-8').rstrip('=')
+    loyalty_number = f"{shop_name[:3].upper()}{registration_number[:3].upper()}{simple_identifier}"
     
     return loyalty_number
 
