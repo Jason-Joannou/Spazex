@@ -17,5 +17,12 @@ def test_spaza_registration(new_spaza_data):
     assert response.status_code == 200, response.text
     assert response.json().get("message") == "Shop registered successfully"
 
+def test_spaza_login(new_spaza_data):
+    response = requests.post(f"{BASE_URL}/spaza_login", json=new_spaza_data)
+    assert response.status_code == 200, response.text
+    assert response.json().get("message") == "Login successful"
+
+
+
 if __name__ == "__main__":
     pytest.main()

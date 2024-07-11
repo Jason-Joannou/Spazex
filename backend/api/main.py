@@ -76,13 +76,13 @@ def register_user(shop: SpazaInfo, db=Depends(get_db_session)):
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
     
-@app.post("/spaza_login/")
+@app.post("/spaza_login")
 def login_user(shop: SpazaInfo, db=Depends(get_db_session)):
     try:
-        query = text("SELECT * FROM SPAZASHOPS WHERE registration = :registration")
-        result = db.execute(query, {"registration": shop.username}).fetchone()
+        query = text("SELECT * FROM SPAZASHOPS WHERE registration_id = :registration")
+        result = db.execute(query, {"registration": shop.spaza_reg_no}).fetchone()
         
-        if result and bcrypt.checkpw(shop.password.encode('utf-8'), result[4].encode('utf-8')):  # Assuming password is the 5th column (index 4)
+        if result and bcrypt.checkpw(shop.spaza_password.encode('utf-8'), result[5].encode('utf-8')):  # Assuming password is the 5th column (index 4)
             return {"message": "Login successful"}
         else:
             raise HTTPException(status_code=401, detail="Invalid registration or password for Spaza shop")
