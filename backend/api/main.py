@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query, HTTPException, Response, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from contextlib import asynccontextmanager
 import logging
@@ -29,6 +30,17 @@ async def lifespan(app: FastAPI):
         logging.info("Database connection closed.")
 
 app = FastAPI(lifespan=lifespan)
+
+# Add CORS middleware
+origins = ["http://localhost:3000"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get('/')
 async def root(): # Need to establish connection to database on connection to site
@@ -66,7 +78,7 @@ def register_user(shop: SpazaInfo, db=Depends(get_db_session)):
             
             # Insert the user into the database
             query_insert = text("INSERT INTO SPAZASHOPS (name, email, registration_id, loyalty_no, password) VALUES (:name, :email, :registration, :loyalty, :password)")
-            db.execute(query_insert, {"name": shop.spaza_name, "email": shop.spaza_email, "registration":shop.spaza_reg_no , "loyalty": loyal_no, "password": hashed_password})
+            db.execute(query_insert, {"name": shop.spaza_name, "email": shop.spaza_email, "registration":shop.spaza_reg_no, "loyalty": loyal_no, "password": hashed_password})
             
             db.commit()
         
